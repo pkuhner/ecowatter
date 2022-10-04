@@ -3,7 +3,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -31,9 +30,16 @@ func SetContentTypeJSON(next http.Handler) http.Handler {
 }
 
 func (a *API) ListSignals(w http.ResponseWriter, r *http.Request) {
-	res, err := json.Marshal(a.Ecowatt.Signals)
+	signals, err := a.Ecowatt.GetSignals()
 	if err != nil {
-		fmt.Fprintf(w, "error")
+		http.Error(w, "Couldn't retrieve signals", http.StatusInternalServerError)
+		return
+	}
+
+	res, err := json.Marshal(signals)
+	if err != nil {
+		http.Error(w, "Couldn't marshal signals", http.StatusInternalServerError)
+		return
 	}
 
 	w.Write(res)
@@ -42,16 +48,31 @@ func (a *API) ListSignals(w http.ResponseWriter, r *http.Request) {
 func (a *API) ListDaySignal(w http.ResponseWriter, r *http.Request) {
 	dayStr := flow.Param(r.Context(), "day")
 	if dayStr == "" {
-		fmt.Fprintf(w, "error")
+		http.Error(w, "Day cannot be empty", http.StatusBadRequest)
+		return
 	}
 
 	day, err := strconv.ParseInt(dayStr, 10, 0)
+	if err != nil {
+		http.Error(w, "Day is not an integer", http.StatusBadRequest)
+		return
+	}
 
-	signal, err := a.Ecowatt.SignalForDay(int(day))
+	if !(day >= 0 && day <= 3) {
+		http.Error(w, "Valid values for day are 0 (today), 1 (tomorrow), 2, and 3", http.StatusBadRequest)
+		return
+	}
+
+	signal, err := a.Ecowatt.GetSignal(int(day))
+	if err != nil {
+		http.Error(w, "Couldn't retrieve signal", http.StatusInternalServerError)
+		return
+	}
 
 	res, err := json.Marshal(signal)
 	if err != nil {
-		fmt.Fprintf(w, "error")
+		http.Error(w, "Couldn't marshal signal", http.StatusInternalServerError)
+		return
 	}
 
 	w.Write(res)

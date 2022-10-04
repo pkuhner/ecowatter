@@ -36,7 +36,7 @@ func main() {
 	mux := flow.New()
 	mux.Use(api.SetContentTypeJSON)
 	mux.HandleFunc("/signals", srv.ListSignals, "GET")
-	mux.HandleFunc("/signals/:day|^[0-3]$", srv.ListDaySignal, "GET")
+	mux.HandleFunc("/signals/:day", srv.ListDaySignal, "GET")
 	srv.Router = mux
 
 	err = http.ListenAndServe(":8080", srv.Router)
